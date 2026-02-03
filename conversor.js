@@ -19,7 +19,7 @@ function realParaDolar(valor, cotacao) {
   return valor / cotacao;
 }
 
-/* ===== FUNÇÃO PARA BUSCAR COTAÇÃO REAL ===== */
+/* ===== COTAÇÃO DO DÓLAR ===== */
 
 function obterCotacaoDolar(callback) {
   const url = "https://economia.awesomeapi.com.br/json/last/USD-BRL";
@@ -27,86 +27,90 @@ function obterCotacaoDolar(callback) {
   https.get(url, (res) => {
     let dados = "";
 
-    res.on("data", (chunk) => {
-      dados += chunk;
-    });
+    res.on("data", chunk => dados += chunk);
 
     res.on("end", () => {
       try {
         const json = JSON.parse(dados);
-        const cotacao = Number(json.USDBRL.bid);
-        callback(null, cotacao);
-      } catch (erro) {
-        callback("Erro ao processar a cotação");
+        callback(null, Number(json.USDBRL.bid));
+      } catch {
+        callback("Erro ao processar cotação");
       }
     });
   }).on("error", () => {
-    callback("Erro ao buscar a cotação");
+    callback("Erro ao buscar cotação");
   });
 }
 
-/* ===== INTERFACE COM O USUÁRIO ===== */
+/* ===== INTERFACE ===== */
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-console.log("Escolha a conversão:");
-console.log("1 - Celsius → Fahrenheit");
-console.log("2 - Fahrenheit → Celsius");
-console.log("3 - Dólar → Real");
-console.log("4 - Real → Dólar");
+function mostrarMenu() {
+  console.log("\nEscolha a conversão:");
+  console.log("1 - Celsius → Fahrenheit");
+  console.log("2 - Fahrenheit → Celsius");
+  console.log("3 - Dólar → Real");
+  console.log("4 - Real → Dólar");
+  console.log("0 - Sair");
 
-rl.question("Opção: ", (opcao) => {
+  rl.question("Opção: ", tratarOpcao);
+}
+
+function tratarOpcao(opcao) {
+  if (opcao === "0") {
+    console.log("Até mais.");
+    rl.close();
+    return;
+  }
+
   rl.question("Digite o valor: ", (valor) => {
     const numero = Number(valor);
 
     if (isNaN(numero)) {
       console.log("Valor inválido.");
-      rl.close();
-      return;
+      return mostrarMenu();
     }
 
     if (opcao === "1") {
-      const resultado = celsiusParaFahrenheit(numero);
-      console.log(`${numero}°C = ${resultado.toFixed(2)}°F`);
-      rl.close();
+      console.log(`${numero}°C = ${celsiusParaFahrenheit(numero).toFixed(2)}°F`);
+      return mostrarMenu();
     }
 
-    else if (opcao === "2") {
-      const resultado = fahrenheitParaCelsius(numero);
-      console.log(`${numero}°F = ${resultado.toFixed(2)}°C`);
-      rl.close();
+    if (opcao === "2") {
+      console.log(`${numero}°F = ${fahrenheitParaCelsius(numero).toFixed(2)}°C`);
+      return mostrarMenu();
     }
 
-    else if (opcao === "3" || opcao === "4") {
+    if (opcao === "3" || opcao === "4") {
       console.log("Buscando cotação atual do dólar...");
 
       obterCotacaoDolar((erro, cotacao) => {
         if (erro) {
           console.log(erro);
-          rl.close();
-          return;
+          return mostrarMenu();
         }
-
-        let resultado;
 
         if (opcao === "3") {
-          resultado = dolarParaReal(numero, cotacao);
-          console.log(`US$ ${numero} = R$ ${resultado.toFixed(2)} (cotação: ${cotacao})`);
+          console.log(`US$ ${numero} = R$ ${(dolarParaReal(numero, cotacao)).toFixed(2)} (cotação ${cotacao})`);
         } else {
-          resultado = realParaDolar(numero, cotacao);
-          console.log(`R$ ${numero} = US$ ${resultado.toFixed(2)} (cotação: ${cotacao})`);
+          console.log(`R$ ${numero} = US$ ${(realParaDolar(numero, cotacao)).toFixed(2)} (cotação ${cotacao})`);
         }
 
-        rl.close();
+        mostrarMenu();
       });
+
+      return;
     }
 
-    else {
-      console.log("Opção inválida.");
-      rl.close();
-    }
+    console.log("Opção inválida.");
+    mostrarMenu();
   });
-});
+}
+
+/* ===== START ===== */
+
+mostrarMenu();
