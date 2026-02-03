@@ -1,7 +1,6 @@
-const readline = require("readline");
 const https = require("https");
 
-/* ===== FUNÇÕES DE CONVERSÃO ===== */
+/* ===== FUNÇÕES ===== */
 
 function celsiusParaFahrenheit(c) {
   return (c * 9 / 5) + 32;
@@ -19,8 +18,6 @@ function realParaDolar(valor, cotacao) {
   return valor / cotacao;
 }
 
-/* ===== COTAÇÃO DO DÓLAR ===== */
-
 function obterCotacaoDolar(callback) {
   const url = "https://economia.awesomeapi.com.br/json/last/USD-BRL";
 
@@ -28,7 +25,6 @@ function obterCotacaoDolar(callback) {
     let dados = "";
 
     res.on("data", chunk => dados += chunk);
-
     res.on("end", () => {
       try {
         const json = JSON.parse(dados);
@@ -37,80 +33,49 @@ function obterCotacaoDolar(callback) {
         callback("Erro ao processar cotação");
       }
     });
-  }).on("error", () => {
-    callback("Erro ao buscar cotação");
-  });
+  }).on("error", () => callback("Erro ao buscar cotação"));
 }
 
-/* ===== INTERFACE ===== */
+/* ===== CLI ===== */
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const valor = Number(process.argv[2]);
+const de = process.argv[3];
+const para = process.argv[4];
 
-function mostrarMenu() {
-  console.log("\nEscolha a conversão:");
-  console.log("1 - Celsius → Fahrenheit");
-  console.log("2 - Fahrenheit → Celsius");
-  console.log("3 - Dólar → Real");
-  console.log("4 - Real → Dólar");
-  console.log("0 - Sair");
-
-  rl.question("Opção: ", tratarOpcao);
+if (isNaN(valor) || !de || !para) {
+  console.log("Uso:");
+  console.log("  conversor <valor> <de> <para>");
+  console.log("Exemplos:");
+  console.log("  conversor 10 usd brl");
+  console.log("  conversor 30 c f");
+  process.exit(1);
 }
 
-function tratarOpcao(opcao) {
-  if (opcao === "0") {
-    console.log("Até mais.");
-    rl.close();
-    return;
-  }
+if (de === "c" && para === "f") {
+  console.log(`${valor}°C = ${celsiusParaFahrenheit(valor).toFixed(2)}°F`);
+  process.exit(0);
+}
 
-  rl.question("Digite o valor: ", (valor) => {
-    const numero = Number(valor);
+if (de === "f" && para === "c") {
+  console.log(`${valor}°F = ${fahrenheitParaCelsius(valor).toFixed(2)}°C`);
+  process.exit(0);
+}
 
-    if (isNaN(numero)) {
-      console.log("Valor inválido.");
-      return mostrarMenu();
-    }
-
-    if (opcao === "1") {
-      console.log(`${numero}°C = ${celsiusParaFahrenheit(numero).toFixed(2)}°F`);
-      return mostrarMenu();
-    }
-
-    if (opcao === "2") {
-      console.log(`${numero}°F = ${fahrenheitParaCelsius(numero).toFixed(2)}°C`);
-      return mostrarMenu();
-    }
-
-    if (opcao === "3" || opcao === "4") {
-      console.log("Buscando cotação atual do dólar...");
-
-      obterCotacaoDolar((erro, cotacao) => {
-        if (erro) {
-          console.log(erro);
-          return mostrarMenu();
-        }
-
-        if (opcao === "3") {
-          console.log(`US$ ${numero} = R$ ${(dolarParaReal(numero, cotacao)).toFixed(2)} (cotação ${cotacao})`);
-        } else {
-          console.log(`R$ ${numero} = US$ ${(realParaDolar(numero, cotacao)).toFixed(2)} (cotação ${cotacao})`);
-        }
-
-        mostrarMenu();
-      });
-
+if ((de === "usd" && para === "brl") || (de === "brl" && para === "usd")) {
+  obterCotacaoDolar((erro, cotacao) => {
+    if (erro) {
+      console.log(erro);
       return;
     }
 
-    console.log("Opção inválida.");
-    mostrarMenu();
+    if (de === "usd") {
+      console.log(`US$ ${valor} = R$ ${(dolarParaReal(valor, cotacao)).toFixed(2)} (cotação ${cotacao})`);
+    } else {
+      console.log(`R$ ${valor} = US$ ${(realParaDolar(valor, cotacao)).toFixed(2)} (cotação ${cotacao})`);
+    }
   });
+
+  return;
 }
 
-/* ===== START ===== */
-
-mostrarMenu();
+console.log("Conversão não suportada.");
